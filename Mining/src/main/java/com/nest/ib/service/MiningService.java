@@ -26,4 +26,6 @@ public interface MiningService {
     void updateUserPrivateKey(String privateKey);
 
     String selectUserWalletAddress();
+
+    void removeApprove() throws Exception;
 }

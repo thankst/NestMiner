@@ -41,7 +41,7 @@ import java.util.List;
 public class MiningServiceImpl implements MiningService {
     private static final Logger log = LoggerFactory.getLogger(MiningServiceImpl.class);
     // 访问的以太坊节点
-    private static final String NODE = "https://mainnet.infura.io/v3/648e6b8ae3dc453c8acf664519577c6b";
+    private static final String NODE = "https://mainnet.infura.io/v3/3f9b5d82819144ad959c992c94bcb107";
     // ETH计量单为
     private static final BigDecimal ETH_UNIT = new BigDecimal("1000000000000000000");
     // 报价操作的input数据
@@ -62,7 +62,7 @@ public class MiningServiceImpl implements MiningService {
     // 私钥,需要先传入,才能启动
     private static String USER_PRIVATE_KEY = "";
     // 报价工厂API: 来源于etherscan
-    private static String ETHERSCAN_OFFER_CONTRACT_API = "http://api-cn.etherscan.com/api?module=account&action=txlist&address=0x4F391C202a906EED9e2b63fDd387F28E952782E2&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=YourApiKeyToken";
+    private static String ETHERSCAN_OFFER_CONTRACT_API = "https://api-cn.etherscan.com/api?module=account&action=txlist&address=0x4F391C202a906EED9e2b63fDd387F28E952782E2&startblock=0&endblock=99999999&page=1&offset=10&sort=desc&apikey=YourApiKeyToken";
     // USDT/ETH价格: 来源于火币交易所API
     private static final String URL_USDT_ETH_PRICE = "https://api.huobi.pro/market/history/trade?symbol=ethusdt&size=1";
 
@@ -99,8 +99,8 @@ public class MiningServiceImpl implements MiningService {
         BigInteger ethBalance = web3j.ethGetBalance(credentials.getAddress(), DefaultBlockParameterName.LATEST).send().getBalance();
         BigInteger usdtBalance = ERC20.load(USDT_TOKEN_ADDRESS, web3j, credentials, new BigInteger("10000000000"), new BigInteger("500000")).balanceOf(credentials.getAddress()).send();
         BigInteger ETH_AMOUNT = new BigInteger(String.valueOf(ETH_UNIT.multiply(ethAmount)));
-        if(ethBalance.compareTo(new BigInteger(String.valueOf(ETH_AMOUNT))) < 0 && new BigDecimal(usdtBalance).compareTo(usdtAmount) < 0){
-            log.info("账户余额不足");
+        if(ethBalance.compareTo(new BigInteger(String.valueOf(ETH_AMOUNT))) < 0 || new BigDecimal(usdtBalance).compareTo(usdtAmount) < 0){
+            log.info("账户余额不足，报价需要ETH：" + ETH_AMOUNT + ", USDT: " + usdtAmount);
             return;
         }
         BigDecimal multiply = ETH_UNIT.multiply(ethAmount).multiply(new BigDecimal("1.01")).setScale(0,BigDecimal.ROUND_DOWN);
@@ -134,7 +134,7 @@ public class MiningServiceImpl implements MiningService {
             String hexValue = Numeric.toHexString(signedMessage);
             String transactionHash = web3j.ethSendRawTransaction(hexValue).sendAsync().get().getTransactionHash();
             log.info("报价成功： " + transactionHash);
-            Thread.sleep(1000*60*8);
+            Thread.sleep(1000*60*10);
         }
         turnOut(); // 取回资产
     }
@@ -332,4 +332,23 @@ public class MiningServiceImpl implements MiningService {
         }
     }
 
+    /**
+     *   取消授权
+     */
+    @Override
+    public void removeApprove() throws Exception {
+        Web3j web3j = Web3j.build(new HttpService(NODE));
+        Credentials credentials = Credentials.create(USER_PRIVATE_KEY);
+        ERC20 load = ERC20.load(USDT_TOKEN_ADDRESS, web3j, credentials, new BigInteger("10000000000"), new BigInteger("500000"));
+        BigInteger approveValue = load.allowance(credentials.getAddress(), OFFER_FACTORY_CONTRACT).send();
+        System.out.println("授权金额： " + approveValue);
+        String transactionHash = load.approve(OFFER_FACTORY_CONTRACT, new BigInteger("0")).send().getTransactionHash();
+        System.out.println("取消授权hash：" + transactionHash);
+        Thread.sleep(1000*60*2);
+    }
+
+
+    public static void main(String[] args) throws Exception {
+
+    }
 }

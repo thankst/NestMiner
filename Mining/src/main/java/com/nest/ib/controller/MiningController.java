@@ -61,5 +61,21 @@ public class MiningController {
         return mav;
     }
 
+    /**
+    * 取消对报价工厂合约的USDT授权
+    */
+    @GetMapping("/removeApprove")
+    public void removeApprove(){
+        try {
+            miningService.removeApprove();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+
 
 }
